@@ -54,11 +54,19 @@ CREATE TABLE consulta(
     nif CHAR(9) NOT NULL REFERENCES medico,
     nome VARCHAR(80) NOT NULL REFERENCES clinica,
     data DATE NOT NULL,
-    hora TIME NOT NULL CHECK (hora BETWEEN '08:00' AND '12:59' OR hora BETWEEN '14:00' AND '18:59'),
+    hora TIME NOT NULL,
     codigo_sns CHAR(12) UNIQUE CHECK (codigo_sns ~ '^[0-9]+$'),
     UNIQUE(ssn, data, hora),
     UNIQUE(nif, data, hora),
-    CONSTRAINT medico_clinica_dia CHECK ((nif, nome, EXTRACT(DOW FROM data) + 1) IN (SELECT nif, nome, dia_da_semana FROM trabalha))
+-- RI 1 verifica se a hora é exata e numa hora válida
+    CHECK (EXTRACT(MINUTE FROM hora) IN (0, 30) AND (EXTRACT(HOUR FROM hora) BETWEEN 8 AND 12 OR EXTRACT(HOUR FROM hora) BETWEEN 14 AND 18)),
+-- RI 2 verifica se o NIF do paciente que contem SSN igual ao SSN registrado na consulta é diferente do NIF do médico que a realiza
+    CHECK ((SELECT p.nif FROM paciente p WHERE p.ssn = consulta.ssn) <> nif),
+-- RI 3 verifica se o médico da consulta esta registrado para trabalhar naquela data
+    CHECK ((nif, nome, CASE EXTRACT(DOW FROM data)
+            WHEN 0 THEN 7
+            ELSE EXTRACT(DOW FROM data)
+          END) IN (SELECT nif, nome, dia_da_semana FROM trabalha))
 );
 
 CREATE TABLE receita(
@@ -75,8 +83,3 @@ CREATE TABLE observacao(
     PRIMARY KEY (id, parametro)
 );
 
--- Create additional checks and constraints
-ALTER TABLE consulta ADD CONSTRAINT horario_check CHECK (
-    (EXTRACT(MINUTE FROM hora) = 0 OR EXTRACT(MINUTE FROM hora) = 30)
-    AND (EXTRACT(HOUR FROM hora) BETWEEN 8 AND 12 OR EXTRACT(HOUR FROM hora) BETWEEN 14 AND 18)
-);
