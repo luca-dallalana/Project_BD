@@ -336,5 +336,6 @@ def desmarca_consulta(clinica):
                     return jsonify({"message": "Appointment deleted.", "status": "success"}), 200
     except Exception as e:
         return jsonify({"Internal Server Error": str(e)}), 500
+    
 if __name__ == "__main__":
     app.run()

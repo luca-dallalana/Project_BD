@@ -100,23 +100,6 @@ INSERT INTO medico (nif, nome, telefone, morada, especialidade) VALUES
     ('200000060', 'Sekinhas 60', '923456838', 'Rua B5, 1000-205 Lisboa', 'cardiologia');
 
 
--- Assign doctors to clinics
-DO $$
-DECLARE
-    doctor RECORD;
-    clinic RECORD;
-    dow SMALLINT;
-BEGIN
-    FOR doctor IN (SELECT nif FROM medico) LOOP
-        FOR clinic IN (SELECT nome FROM clinica ORDER BY random() LIMIT 2) LOOP
-            FOR dow IN 1..7 LOOP
-                INSERT INTO trabalha (nif, nome, dia_da_semana)
-                VALUES (doctor.nif, clinic.nome, dow);
-            END LOOP;
-        END LOOP;
-    END LOOP;
-END $$;
-
 -- Insert patients
 DO $$
 DECLARE
@@ -137,26 +120,98 @@ BEGIN
     END LOOP;
 END $$;
 
--- Insert consultations
 DO $$
 DECLARE
-    i INTEGER;
-    patient_ssn CHAR(11);
     doctor_nif CHAR(9);
     clinic_name VARCHAR(80);
+    day_num INTEGER;
+    clinic_count INTEGER;
+    consultation_id INTEGER;
     consult_date DATE;
     consult_time TIME;
-    sns_code CHAR(12);
+    patient RECORD;
+    consultation_slots TIME[] := ARRAY[
+        '08:00'::TIME, '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+        '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
+    ];
+    codigo_sns CHAR(12);
+    clinic_list TEXT[] := ARRAY[
+        'Clinica Javi Seoul Paw', 'Clinica Oscar Alho', 'Clinica Giuseppe Cadura',
+        'Clinica Doutor Melo Rego em Vivara Grande', 'Clinica Shygura Myiapyka'
+    ];
 BEGIN
-    FOR i IN 1..5000 LOOP
-        patient_ssn := LPAD(i::TEXT, 11, '0');
-        doctor_nif := (SELECT nif FROM medico ORDER BY random() LIMIT 1);
-        clinic_name := (SELECT nome FROM clinica ORDER BY random() LIMIT 1);
-        consult_date := '2023-01-01'::DATE + (i % 730);
-        consult_time := ('08:00'::TIME + (i % 20) * '00:30'::INTERVAL);
-        sns_code := LPAD(i::TEXT, 12, '0');
-        INSERT INTO consulta (ssn, nif, nome, data, hora, codigo_sns) VALUES (patient_ssn, doctor_nif, clinic_name, consult_date, consult_time, sns_code);
+    -- Initialize a table to keep track of doctor assignments
+    CREATE TEMP TABLE doctor_assignments (nif CHAR(9), clinic VARCHAR(80), day_num INTEGER);
+
+    -- Assign each doctor to at least two clinics
+    FOR doctor_nif IN (SELECT nif FROM medico) LOOP
+        -- Randomly assign to two different clinics
+        FOR i IN 1..2 LOOP
+            clinic_name := clinic_list[ceil(random() * array_length(clinic_list, 1))];
+            FOR day_num IN 1..7 LOOP
+                INSERT INTO doctor_assignments (nif, clinic, day_num) VALUES (doctor_nif, clinic_name, day_num);
+            END LOOP;
+        END LOOP;
     END LOOP;
+
+    -- Ensure each clinic has at least 8 doctors each day
+    FOR day_num IN 1..7 LOOP
+        FOR clinic_name IN (SELECT UNNEST(clinic_list)) LOOP
+            clinic_count := (SELECT COUNT(DISTINCT nif) FROM doctor_assignments WHERE clinic = clinic_name AND day_num = day_num);
+            IF clinic_count < 8 THEN
+                FOR i IN 1..(8 - clinic_count) LOOP
+                    doctor_nif := (SELECT nif FROM medico ORDER BY random() LIMIT 1);
+                    INSERT INTO doctor_assignments (nif, clinic, day_num) VALUES (doctor_nif, clinic_name, day_num);
+                END LOOP;
+            END IF;
+        END LOOP;
+    END LOOP;
+
+    -- Finalize the assignments into the trabalha table
+    INSERT INTO trabalha (nif, nome, dia_da_semana)
+    SELECT nif, clinic, day_num FROM doctor_assignments;
+
+    -- Ensure each patient has at least one consultation
+    FOR patient IN (SELECT ssn FROM paciente) LOOP
+        clinic_name := (SELECT nome FROM clinica ORDER BY random() LIMIT 1);
+        doctor_nif := (SELECT nif FROM trabalha WHERE nome = clinic_name ORDER BY random() LIMIT 1);
+        consult_date := '2023-01-01'::DATE + (random() * 729)::INTEGER;
+        consult_time := consultation_slots[(random() * array_length(consultation_slots, 1))::INTEGER + 1];
+        consultation_id := nextval('consulta_id_seq');
+        codigo_sns := LPAD(consultation_id::TEXT, 12, '0');
+
+        -- Ensure the doctor is not consulting themselves
+        IF patient.ssn <> doctor_nif THEN
+            INSERT INTO consulta (ssn, nif, nome, data, hora, codigo_sns)
+            VALUES (patient.ssn, doctor_nif, clinic_name, consult_date, consult_time, codigo_sns)
+            ON CONFLICT DO NOTHING; -- Avoid duplicate entries
+        END IF;
+    END LOOP;
+
+    -- Ensure each clinic has at least 20 consultations per day
+    FOR i IN 1..730 LOOP -- Number of days in 2023 and 2024
+        consult_date := '2023-01-01'::DATE + (i - 1);
+
+        FOR clinic_name IN (SELECT UNNEST(clinic_list)) LOOP
+            FOR j IN 1..20 LOOP
+                doctor_nif := (SELECT nif FROM trabalha WHERE nome = clinic_name AND EXTRACT(DOW FROM consult_date) = trabalha.dia_da_semana ORDER BY random() LIMIT 1);
+                patient := (SELECT ssn FROM paciente ORDER BY random() LIMIT 1);
+                consult_time := consultation_slots[(j - 1) % array_length(consultation_slots, 1) + 1];
+                consultation_id := nextval('consulta_id_seq');
+                codigo_sns := LPAD(consultation_id::TEXT, 12, '0');
+
+                -- Ensure the doctor is not consulting themselves
+                IF patient.ssn <> doctor_nif THEN
+                    INSERT INTO consulta (ssn, nif, nome, data, hora, codigo_sns)
+                    VALUES (patient.ssn, doctor_nif, clinic_name, consult_date, consult_time, codigo_sns)
+                    ON CONFLICT DO NOTHING; -- Avoid duplicate entries
+                END IF;
+            END LOOP;
+        END LOOP;
+    END LOOP;
+
+    -- Clean up temporary table
+    DROP TABLE doctor_assignments;
 END $$;
 
 -- Insert prescriptions
