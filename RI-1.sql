@@ -1,0 +1,4 @@
+%%sql
+-- RI 1 verifica se a hora é exata e numa hora válida
+ALTER TABLE CONSULTA
+    ADD CONSTRAINT time CHECK (EXTRACT(MINUTE FROM hora) IN (0, 30) AND (EXTRACT(HOUR FROM hora) BETWEEN 8 AND 12 OR EXTRACT(HOUR FROM hora) BETWEEN 14 AND 18))
