@@ -4,13 +4,46 @@ import datetime
 
 fake = Faker('pt_PT')
 
+def generate_unique_phone_number(existing_numbers):
+    while True:
+        phone_number = fake.phone_number()
+        if phone_number not in existing_numbers:
+            existing_numbers.add(phone_number)
+            return phone_number
+
+def generate_unique_nif(existing_nifs):
+    while True:
+        nif = fake.numerify(text='#########')
+        if nif not in existing_nifs:
+            existing_nifs.add(nif)
+            return nif
+
+def generate_unique_ssn(existing_ssns):
+    while True:
+        ssn = fake.numerify(text='###########')
+        if ssn not in existing_ssns:
+            existing_ssns.add(ssn)
+            return ssn
+
+def generate_morada():
+    rua = fake.street_name()
+    numero = fake.building_number()
+    postal_code = fake.postcode()
+    cidade = fake.city()
+    return f"{rua} {numero}, {postal_code} {cidade}"
+
+existing_phone_numbers = set()
+existing_nifs = set()
+existing_ssns = set()
+existing_consulta_sns = set()
+
 # Generate data for clinicas
 clinicas = [
-    {"nome": "Clinica Lisboa", "telefone": fake.unique.phone_number(), "morada": f"Rua A, 123, 1000-001 Lisboa"},
-    {"nome": "Clinica Cascais", "telefone": fake.unique.phone_number(), "morada": f"Rua B, 456, 2750-001 Cascais"},
-    {"nome": "Clinica Sintra", "telefone": fake.unique.phone_number(), "morada": f"Rua C, 789, 2710-001 Sintra"},
-    {"nome": "Clinica Almada", "telefone": fake.unique.phone_number(), "morada": f"Rua D, 101, 2800-001 Almada"},
-    {"nome": "Clinica Oeiras", "telefone": fake.unique.phone_number(), "morada": f"Rua E, 202, 2780-001 Oeiras"}
+    {"nome": "Clinica Lisboa", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
+    {"nome": "Clinica Cascais", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
+    {"nome": "Clinica Sintra", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
+    {"nome": "Clinica Almada", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
+    {"nome": "Clinica Oeiras", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()}
 ]
 
 # Generate data for enfermeiros
@@ -18,10 +51,10 @@ enfermeiros = []
 for clinica in clinicas:
     for _ in range(random.randint(5, 6)):
         enfermeiro = {
-            "nif": fake.unique.numerify(text='#########'),
+            "nif": generate_unique_nif(existing_nifs),
             "nome": fake.unique.name(),
-            "telefone": fake.unique.phone_number(),
-            "morada": fake.address().replace("\n", ", "),
+            "telefone": generate_unique_phone_number(existing_phone_numbers),
+            "morada": generate_morada(),
             "nome_clinica": clinica["nome"]
         }
         enfermeiros.append(enfermeiro)
@@ -33,10 +66,10 @@ for especialidade in especialidades:
     num_medicos = 20 if especialidade == 'clínica geral' else 8
     for _ in range(num_medicos):
         medico = {
-            "nif": fake.unique.numerify(text='#########'),
+            "nif": generate_unique_nif(existing_nifs),
             "nome": fake.unique.name(),
-            "telefone": fake.unique.phone_number(),
-            "morada": fake.address().replace("\n", ", "),
+            "telefone": generate_unique_phone_number(existing_phone_numbers),
+            "morada": generate_morada(),
             "especialidade": especialidade
         }
         medicos.append(medico)
@@ -54,11 +87,11 @@ for medico in medicos:
 pacientes = []
 for _ in range(5000):
     paciente = {
-        "ssn": fake.unique.numerify(text='###########'),
-        "nif": fake.unique.numerify(text='#########'),
+        "ssn": generate_unique_ssn(existing_ssns),
+        "nif": generate_unique_nif(existing_nifs),
         "nome": fake.name(),
-        "telefone": fake.phone_number(),
-        "morada": fake.address().replace("\n", ", "),
+        "telefone": generate_unique_phone_number(existing_phone_numbers),
+        "morada": generate_morada(),
         "data_nasc": fake.date_of_birth(minimum_age=0, maximum_age=100)
     }
     pacientes.append(paciente)
@@ -67,7 +100,7 @@ for _ in range(5000):
 consultas = []
 consultas_per_day = 20
 start_date = datetime.date(2023, 1, 1)
-end_date = datetime.date(2024, 12, 31)
+end_date = datetime.date(2024, 5, 31)
 num_days = (end_date - start_date).days
 date_list = [start_date + datetime.timedelta(days=x) for x in range(num_days)]
 
@@ -76,13 +109,18 @@ for date in date_list:
         for _ in range(consultas_per_day):
             paciente = random.choice(pacientes)
             medico = random.choice(medicos)
+            while True:
+                codigo_sns = fake.numerify(text='############')
+                if codigo_sns not in existing_consulta_sns:
+                    existing_consulta_sns.add(codigo_sns)
+                    break
             consulta = {
                 "ssn": paciente["ssn"],
                 "nif": medico["nif"],
                 "nome": clinica["nome"],
                 "data": date,
                 "hora": fake.time(),
-                "codigo_sns": fake.unique.numerify(text='############')
+                "codigo_sns": codigo_sns
             }
             consultas.append(consulta)
 
