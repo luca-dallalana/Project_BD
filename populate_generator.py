@@ -76,12 +76,33 @@ for especialidade in especialidades:
 
 # Generate data for trabalha
 trabalha = []
-dias_da_semana = list(range(1, 8))
+dias_da_semana = list(range(0, 7))
+min_doctors_per_clinic_per_day = 8
+
+clinica_medicos = {clinica["nome"]: [] for clinica in clinicas}
+medico_clinicas = {medico["nif"]: [] for medico in medicos}
+
+# Assign each doctor to at least two clinics
 for medico in medicos:
-    clinicas_to_work = random.sample(clinicas, 2)
-    for clinica in clinicas_to_work:
-        for dia in dias_da_semana:
-            trabalha.append({"nif": medico["nif"], "nome": clinica["nome"], "dia_da_semana": dia})
+    assigned_clinics = random.sample(clinicas, 2)
+    for clinica in assigned_clinics:
+        medico_clinicas[medico["nif"]].append(clinica["nome"])
+        clinica_medicos[clinica["nome"]].append(medico["nif"])
+
+# Ensure each clinic has at least 8 doctors each day
+for clinica, medicos_in_clinic in clinica_medicos.items():
+    while len(medicos_in_clinic) < min_doctors_per_clinic_per_day:
+        medico = random.choice(medicos)
+        if clinica not in medico_clinicas[medico["nif"]]:
+            medico_clinicas[medico["nif"]].append(clinica)
+            clinica_medicos[clinica].append(medico["nif"])
+
+# Create the 'trabalha' entries ensuring doctors work in assigned clinics and every day
+for clinica, medicos_in_clinic in clinica_medicos.items():
+    for dia in dias_da_semana:
+        random.shuffle(medicos_in_clinic)
+        for medico_nif in medicos_in_clinic:
+            trabalha.append({"nif": medico_nif, "nome": clinica, "dia_da_semana": dia})
 
 # Generate data for pacientes
 pacientes = []
