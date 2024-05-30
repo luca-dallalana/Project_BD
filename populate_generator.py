@@ -70,7 +70,8 @@ for especialidade in especialidades:
             "nome": fake.unique.name(),
             "telefone": generate_unique_phone_number(existing_phone_numbers),
             "morada": generate_morada(),
-            "especialidade": especialidade
+            "especialidade": especialidade,
+            "consultations_per_day": 0  # Track the number of consultations per day for each doctor
         }
         medicos.append(medico)
 
@@ -89,20 +90,32 @@ for medico in medicos:
         medico_clinicas[medico["nif"]].append(clinica["nome"])
         clinica_medicos[clinica["nome"]].append(medico["nif"])
 
-# Ensure each clinic has at least 8 doctors each day
-for clinica, medicos_in_clinic in clinica_medicos.items():
-    while len(medicos_in_clinic) < min_doctors_per_clinic_per_day:
-        medico = random.choice(medicos)
-        if clinica not in medico_clinicas[medico["nif"]]:
-            medico_clinicas[medico["nif"]].append(clinica)
-            clinica_medicos[clinica].append(medico["nif"])
-
-# Create the 'trabalha' entries ensuring doctors work in assigned clinics and every day
+# Ensure each clinic has at least 8 doctors each day and doctors work in only one clinic per day
 for clinica, medicos_in_clinic in clinica_medicos.items():
     for dia in dias_da_semana:
-        random.shuffle(medicos_in_clinic)
-        for medico_nif in medicos_in_clinic:
+        available_doctors = medicos_in_clinic.copy()
+        while len(available_doctors) < min_doctors_per_clinic_per_day:
+            medico = random.choice(medicos)
+            if clinica not in medico_clinicas[medico["nif"]]:
+                medico_clinicas[medico["nif"]].append(clinica)
+                clinica_medicos[clinica].append(medico["nif"])
+                available_doctors.append(medico["nif"])
+        
+        random.shuffle(available_doctors)
+        for medico_nif in available_doctors[:min_doctors_per_clinic_per_day]:
             trabalha.append({"nif": medico_nif, "nome": clinica, "dia_da_semana": dia})
+
+# Ensure no doctor works in different clinics on the same day
+for medico_nif, clinics in medico_clinicas.items():
+    clinic_schedule = {}
+    for dia in dias_da_semana:
+        clinic = random.choice(clinics)
+        while dia in clinic_schedule and clinic in clinic_schedule[dia]:
+            clinic = random.choice(clinics)
+        if dia not in clinic_schedule:
+            clinic_schedule[dia] = []
+        clinic_schedule[dia].append(clinic)
+        trabalha.append({"nif": medico_nif, "nome": clinic, "dia_da_semana": dia})
 
 # Generate data for pacientes
 pacientes = []
@@ -119,31 +132,44 @@ for _ in range(5000):
 
 # Generate data for consulta
 consultas = []
-consultas_per_day = 20
 start_date = datetime.date(2023, 1, 1)
-end_date = datetime.date(2024, 5, 31)
+end_date = datetime.date(2024, 12, 31)
 num_days = (end_date - start_date).days
 date_list = [start_date + datetime.timedelta(days=x) for x in range(num_days)]
 
 for date in date_list:
     for clinica in clinicas:
-        for _ in range(consultas_per_day):
-            paciente = random.choice(pacientes)
-            medico = random.choice(medicos)
-            while True:
-                codigo_sns = fake.numerify(text='############')
-                if codigo_sns not in existing_consulta_sns:
-                    existing_consulta_sns.add(codigo_sns)
-                    break
-            consulta = {
-                "ssn": paciente["ssn"],
-                "nif": medico["nif"],
-                "nome": clinica["nome"],
-                "data": date,
-                "hora": fake.time(),
-                "codigo_sns": codigo_sns
-            }
-            consultas.append(consulta)
+        while True:
+            consultations_count = len([c for c in consultas if c["nome"] == clinica["nome"] and c["data"] == date])
+            if consultations_count >= 20:
+                break
+            available_doctors = [medico for medico in medicos if clinica["nome"] in medico_clinicas[medico["nif"]]]
+            random.shuffle(available_doctors)
+            for medico in available_doctors:
+                if medico["consultations_per_day"] < 2:
+                    paciente = random.choice(pacientes)
+                    codigo_sns = fake.numerify(text='############')
+                    hora = fake.time(pattern='%H:%M')
+                    hour, minute = map(int, hora.split(':'))
+                    if (8 <= hour < 13 or 14 <= hour < 19) and (minute == 0 or minute == 30):
+                        if paciente["nif"] != medico["nif"]:
+                            day_of_week = date.weekday()
+                            if clinica["nome"] in medico_clinicas[medico["nif"]] and trabalha.count({"nif": medico["nif"], "nome": clinica["nome"], "dia_da_semana": day_of_week}) > 0:
+                                consulta = {
+                                    "ssn": paciente["ssn"],
+                                    "nif": medico["nif"],
+                                    "nome": clinica["nome"],
+                                    "data": date,
+                                    "hora": hora,
+                                    "codigo_sns": codigo_sns
+                                }
+                                consultas.append(consulta)
+                                medico["consultations_per_day"] += 1
+                                break
+
+# Reset consultations count for each doctor at the end of the day
+for medico in medicos:
+    medico["consultations_per_day"] = 0
 
 # Generate data for receita
 receitas = []
@@ -208,3 +234,4 @@ queries.append(generate_insert_query('observacao', observacoes))
 with open('populate_database.sql', 'w') as file:
     for query in queries:
         file.write(query)
+
