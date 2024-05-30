@@ -133,7 +133,7 @@ for _ in range(5000):
 # Generate data for consulta
 consultas = []
 start_date = datetime.date(2023, 1, 1)
-end_date = datetime.date(2024, 12, 31)
+end_date = datetime.date(2024, 5, 31)
 num_days = (end_date - start_date).days
 date_list = [start_date + datetime.timedelta(days=x) for x in range(num_days)]
 
