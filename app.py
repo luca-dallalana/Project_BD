@@ -110,7 +110,7 @@ def especialidades_clinica(clinica):
                     WHERE c.nome = %(clinica)s;
                     """,
                     {"clinica": clinica},
-                )
+                ).fetchall
                 if cur.rowcount == 0:
                     return jsonify({"message": "Clinics not found.", "status": "error"}), 404
                 especialidades_clinicas = cur.execute(
