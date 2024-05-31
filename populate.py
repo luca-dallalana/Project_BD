@@ -1,71 +1,53 @@
 import random
 from faker import Faker
 import datetime
-
 fake = Faker('pt_PT')
 
-def generate_unique_phone_number(existing_numbers, max_attempts=1000):
-    attempts = 0
-    while attempts < max_attempts:
-        phone_number = fake.phone_number()
-        if phone_number not in existing_numbers:
-            existing_numbers.add(phone_number)
-            return phone_number
-        attempts += 1
-    raise RuntimeError("Max attempts reached for generating unique phone number")
+Telefone = 100000000000000
+Morada = 0
+NIF = 100000000
+SSN = 10000000000
+SNS = 100000000000
 
-def generate_unique_nif(existing_nifs, max_attempts=1000):
-    attempts = 0
-    while attempts < max_attempts:
-        nif = fake.numerify(text='#########')
-        if nif not in existing_nifs:
-            existing_nifs.add(nif)
-            return nif
-        attempts += 1
-    raise RuntimeError("Max attempts reached for generating unique NIF")
 
-def generate_unique_ssn(existing_ssns, max_attempts=1000):
-    attempts = 0
-    while attempts < max_attempts:
-        ssn = fake.numerify(text='###########')
-        if ssn not in existing_ssns:
-            existing_ssns.add(ssn)
-            return ssn
-        attempts += 1
-    raise RuntimeError("Max attempts reached for generating unique SSN")
+start_date = datetime.date(2023, 1, 1)
+end_date = datetime.date(2024, 5, 31)
+time_slots = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30']
 
-def generate_morada():
-    rua = fake.street_name()
-    numero = fake.building_number()
-    postal_code = fake.postcode()
-    cidade = fake.city()
-    return f"{rua} {numero}, {postal_code} {cidade}"
+def create_timetable(dict):
+    current_date = start_date
+    while current_date <= end_date:
+        dict[str(current_date)] = time_slots
+        current_date += datetime.timedelta(days=1)
 
-existing_phone_numbers = set()
-existing_nifs = set()
-existing_ssns = set()
-existing_consulta_sns = set()
+date_clinica_lisboa = create_timetable()
 
 # Generate data for clinicas
 clinicas = [
-    {"nome": "Clinica Lisboa", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
-    {"nome": "Clinica Cascais", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
-    {"nome": "Clinica Sintra", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
-    {"nome": "Clinica Almada", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()},
-    {"nome": "Clinica Oeiras", "telefone": generate_unique_phone_number(existing_phone_numbers), "morada": generate_morada()}
+    {"nome": "Clinica Lisboa", "telefone": Telefone + 1, "morada": 'Rua A' + str(Morada + 1)},
+    {"nome": "Clinica Cascais", "telefone": Telefone + 2, "morada": 'Rua A' + str(Morada + 2)},
+    {"nome": "Clinica Sintra", "telefone": Telefone + 3, "morada": 'Rua A' + str(Morada + 3)},
+    {"nome": "Clinica Almada", "telefone": Telefone + 4, "morada": 'Rua A' + str(Morada + 4)},
+    {"nome": "Clinica Oeiras", "telefone": Telefone + 5, "morada": 'Rua A' + str(Morada + 5)}
 ]
+
+Telefone += 6
+Morada += 6
 
 # Generate data for enfermeiros
 enfermeiros = []
 for clinica in clinicas:
     for _ in range(random.randint(5, 6)):
         enfermeiro = {
-            "nif": generate_unique_nif(existing_nifs),
-            "nome": fake.unique.name(),
-            "telefone": generate_unique_phone_number(existing_phone_numbers),
-            "morada": generate_morada(),
+            "nif": NIF,
+            "nome": 'Enfermeiro' + str(NIF),
+            "telefone": Telefone,
+            "morada": 'Rua B' + str(Morada),
             "nome_clinica": clinica["nome"]
         }
+        NIF += 1
+        Telefone += 1
+        Morada += 1
         enfermeiros.append(enfermeiro)
 
 # Generate data for medicos
@@ -75,14 +57,34 @@ for especialidade in especialidades:
     num_medicos = 20 if especialidade == 'clínica geral' else 8
     for _ in range(num_medicos):
         medico = {
-            "nif": generate_unique_nif(existing_nifs),
-            "nome": fake.unique.name(),
-            "telefone": generate_unique_phone_number(existing_phone_numbers),
-            "morada": generate_morada(),
+            "nif": NIF,
+            "nome": 'Medico' + str(NIF),
+            "telefone": Telefone,
+            "morada": 'Rua C' + str(Morada),
             "especialidade": especialidade,
             "consultations_per_day": 0  # Track the number of consultations per day for each doctor
         }
+        NIF += 1
+        Telefone += 1
+        Morada += 1
         medicos.append(medico)
+
+# Generate data for pacientes
+pacientes = []
+for _ in range(5000):
+    paciente = {
+        "ssn": SSN,
+        "nif": NIF,
+        "nome": 'Paciente' + str(NIF),
+        "telefone": Telefone,
+        "morada": 'Rua D' + str(Morada),
+        "data_nasc": fake.date_of_birth(minimum_age=0, maximum_age=100)
+    }
+    NIF += 1
+    Telefone += 1
+    Morada += 1
+    SSN += 1
+    pacientes.append(paciente)
 
 # Generate data for trabalha
 trabalha = []
@@ -126,19 +128,6 @@ for medico_nif, clinics in medico_clinicas.items():
         clinic_schedule[dia].append(clinic)
         trabalha.append({"nif": medico_nif, "nome": clinic, "dia_da_semana": dia})
 
-# Generate data for pacientes
-pacientes = []
-for _ in range(5000):
-    paciente = {
-        "ssn": generate_unique_ssn(existing_ssns),
-        "nif": generate_unique_nif(existing_nifs),
-        "nome": fake.name(),
-        "telefone": generate_unique_phone_number(existing_phone_numbers),
-        "morada": generate_morada(),
-        "data_nasc": fake.date_of_birth(minimum_age=0, maximum_age=100)
-    }
-    pacientes.append(paciente)
-
 # Generate data for consulta
 consultas = []
 start_date = datetime.date(2023, 1, 1)
@@ -157,9 +146,10 @@ for date in date_list:
             for medico in available_doctors:
                 if medico["consultations_per_day"] < 2:
                     paciente = random.choice(pacientes)
-                    codigo_sns = fake.numerify(text='############')
-                    hora = fake.time(pattern='%H:%M')
-                    hour, minute = map(int, hora.split(':'))
+                    codigo_sns = SNS
+                    hour = random.choice([8,9,10,11,12,14,15,16,17,18])
+                    minute = random.choice([0,30])
+                    SNS += 1
                     if (8 <= hour < 13 or 14 <= hour < 19) and (minute == 0 or minute == 30):
                         if paciente["nif"] != medico["nif"]:
                             day_of_week = date.weekday()
@@ -169,7 +159,7 @@ for date in date_list:
                                     "nif": medico["nif"],
                                     "nome": clinica["nome"],
                                     "data": date,
-                                    "hora": hora,
+                                    "hora": hour,
                                     "codigo_sns": codigo_sns
                                 }
                                 consultas.append(consulta)

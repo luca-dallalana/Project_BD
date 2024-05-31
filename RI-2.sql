@@ -1,6 +1,6 @@
 %%sql
 -- RI 2 verifica se o NIF do paciente que contem SSN igual ao SSN registrado na consulta é diferente do NIF do médico que a realiza
-DROP FUNCTION IF EXISTS check_doctor_patient CASCADE;
+DROP FUNCTION IF EXISTS check_doctor_patient;
 
 CREATE OR REPLACE FUNCTION check_doctor_patient()
 RETURNS TRIGGER AS

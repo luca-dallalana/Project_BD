@@ -1,6 +1,6 @@
 %%sql
 -- RI 3 verifica se o médico da consulta esta registrado para trabalhar naquela data
-DROP FUNCTION IF EXISTS check_doctor_schedule CASCADE;
+DROP FUNCTION IF EXISTS check_doctor_schedule;
 
 CREATE OR REPLACE FUNCTION check_doctor_schedule()
 RETURNS TRIGGER AS 

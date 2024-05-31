@@ -3,7 +3,6 @@
 %%sql
 -- CREATE INDEX ...
 -- Aceleram as operações de JOIN
-CREATE INDEX idx_paciente_consulta_ssn ON paciente(ssn), consulta(ssn);
 CREATE INDEX idx_consulta_observacao_id ON consulta(id), observacao(id);
 
 -- Um índice composto (parametro, valor) permite filtrar rapidamente as linhas que atendem a ambos os critérios
@@ -19,10 +18,6 @@ WHERE parametro = 'pressão diastólica' AND valor >= 9;
 
 
 -- CREATE INDEX ...
-
--- Acelera a operação JOIN
-CREATE INDEX idx_medico_consulta_nif ON medico(nif), consulta(nif);
-CREATE INDEX idx_consulta_receita_codigo_sns ON consulta(codigo_sns), receita(codigo_sns);
 
 -- A especialidade e a qtd aceleram a seleção e as operações GROUP BY e SORT
 CREATE INDEX idx_medico_especialidade ON medico(especialidade);
