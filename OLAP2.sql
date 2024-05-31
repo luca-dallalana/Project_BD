@@ -1,3 +1,5 @@
+%%sql
+    
 -- Seleciona as consultas relevantes de cardiologia, adicionando a data da consulta anterior
 WITH medicamento_cardio AS (
     SELECT
@@ -23,6 +25,7 @@ consec_mes AS (
         EXTRACT(YEAR FROM prev_data) * 12 + EXTRACT(MONTH FROM prev_data) AS prev_month,
         CASE
             WHEN prev_data IS NULL THEN 0
+            WHEN ((2024 * 12 - 7) - (EXTRACT(YEAR FROM data) * 12 + EXTRACT(MONTH FROM data)) > 0) THEN 0
             WHEN (EXTRACT(YEAR FROM data) * 12 + EXTRACT(MONTH FROM data)) -
                  (EXTRACT(YEAR FROM prev_data) * 12 + EXTRACT(MONTH FROM prev_data)) = 1 THEN 1
             ELSE 0
@@ -31,7 +34,7 @@ consec_mes AS (
         medicamento_cardio
 ), 
 --  Cria um grupo_id que identifica sequências de meses consecutivos
-grupos AS (
+seq AS (
     SELECT
         ssn,
         medicamento,
@@ -39,14 +42,30 @@ grupos AS (
         SUM(consecutive_flag) OVER (PARTITION BY ssn, medicamento ORDER BY data) AS grupo_id
     FROM
         consec_mes
+),
+tabela_final AS(
+SELECT
+    ssn,
+    medicamento,
+    MIN(data) AS start_date,
+    MAX(data) AS end_date,
+    COUNT(*) AS num_months
+FROM
+    seq
+GROUP BY
+    ssn,
+    medicamento,
+    grupo_id
+ORDER BY
+    ssn,
+    medicamento,
+    start_date
 )
 SELECT
     ssn,
     medicamento,
-    grupo_id
+    num_months
 FROM
-    grupos
+    tabela_final
 WHERE
-    grupo_id >= 12;
-
-
+    num_months >= 12;
