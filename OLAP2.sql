@@ -24,8 +24,8 @@ consec_mes AS (
         CASE
             WHEN prev_data IS NULL THEN 0
             WHEN (EXTRACT(YEAR FROM data) * 12 + EXTRACT(MONTH FROM data)) -
-                 (EXTRACT(YEAR FROM prev_data) * 12 + EXTRACT(MONTH FROM prev_data)) = 1 THEN 0
-            ELSE 1
+                 (EXTRACT(YEAR FROM prev_data) * 12 + EXTRACT(MONTH FROM prev_data)) = 1 THEN 1
+            ELSE 0
         END AS consecutive_flag
     FROM
         medicamento_cardio
