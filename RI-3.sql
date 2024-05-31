@@ -10,6 +10,10 @@ DECLARE
     dia_semana SMALLINT;
 BEGIN
     dia_semana := EXTRACT(DOW FROM NEW.data);
+    IF dia_semana = 0 THEN
+        dia_semana := 7;
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1
         FROM trabalha t
