@@ -1,22 +1,17 @@
 SELECT 
-    m.especialidade, 
-    m.nome AS nome_medico, 
-    c.nome AS nome_clinica, 
-    o.parametro, 
-    AVG(o.valor) AS media_valor, 
-    STDDEV(o.valor) AS desvio_padrao_valor
+    hp.especialidade, 
+    hp.nome AS nome_medico, 
+    hp.nome AS nome_clinica, 
+    hp.chave, 
+    AVG(hp.valor) AS media_valor, 
+    STDDEV(hp.valor) AS desvio_padrao_valor
 FROM 
-    medico m
-JOIN 
-    consulta co ON m.nif = co.nif
-JOIN 
-    clinica c ON co.nome = c.nome
-JOIN 
-    observacao o ON co.id = o.id
+    historial_paciente hp
+WHERE hp.tipo = 'observacao'
 GROUP BY 
-    CUBE ((m.especialidade, m.nome), c.nome, o.parametro)
+    CUBE ((hp.especialidade, hp.nome), hp.nome, hp.chave)
 ORDER BY 
-    m.especialidade, 
-    m.nome, 
-    c.nome, 
-    o.parametro;
+    hp.especialidade, 
+    hp.nome, 
+    hp.nome, 
+    hp.chave;
