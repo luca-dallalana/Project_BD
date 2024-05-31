@@ -154,7 +154,7 @@ for date in date_list:
                     if (8 <= hour < 13 or 14 <= hour < 19) and (minute == 0 or minute == 30):
                         if paciente["nif"] != medico["nif"]:
                             day_of_week = date.weekday()
-                            if clinica["nome"] in medico_clinicas[medico["nif"]] and trabalha.count({"nif": medico["nif"], "nome": clinica["nome"], "dia_da_semana": day_of_week}) > 0:
+                            if clinica["nome"] in medico_clinicas[medico["nif"]] and any(t['nif'] == medico["nif"] and t['nome'] == clinica["nome"] and t['dia_da_semana'] == day_of_week for t in trabalha):
                                 consulta = {
                                     "ssn": paciente["ssn"],
                                     "nif": medico["nif"],
@@ -167,9 +167,9 @@ for date in date_list:
                                 medico["consultations_per_day"] += 1
                                 break
 
-# Reset consultations count for each doctor at the end of the day
-for medico in medicos:
-    medico["consultations_per_day"] = 0
+    # Reset consultations count for each doctor at the end of the day
+    for medico in medicos:
+        medico["consultations_per_day"] = 0
 
 # Generate data for receita
 receitas = []
@@ -234,4 +234,3 @@ queries.append(generate_insert_query('observacao', observacoes))
 with open('populate_database.sql', 'w') as file:
     for query in queries:
         file.write(query)
-
