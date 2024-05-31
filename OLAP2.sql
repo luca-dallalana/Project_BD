@@ -43,10 +43,10 @@ grupos AS (
 SELECT
     ssn,
     medicamento,
-    meses_consecutivos
+    grupo_id
 FROM
-    contagem_meses
+    grupos
 WHERE
-    meses_consecutivos >= 12;
+    grupo_id >= 12;
 
 
