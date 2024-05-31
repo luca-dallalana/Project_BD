@@ -1,17 +1,15 @@
-SELECT 
-    COALESCE(especialidade, 'total') AS nivel,
-    CASE 
-        WHEN GROUPING(especialidade) = 1 THEN NULL
-        ELSE AVG(valor) 
-    END AS media,
-    CASE 
-        WHEN GROUPING(especialidade) = 1 THEN NULL
-        ELSE STDDEV(valor) 
-    END AS desvio_padrao
-FROM historial_paciente
-GROUP BY GROUPING SETS (
-    (),
-    (especialidade),
-    (especialidade, m.nome),
-    (especialidade, m.nome, cl.nome)
-);
+WITH soma_por_medicamento AS(
+	SELECT
+		medicamento, SUM(quantidade) AS quantidade
+	FROM
+		receita
+	GROUP BY medicamento
+)
+
+SELECT
+	hp.localidade, hp.nome, hp.mes, hp.dia_do_mes, m.nome, hp.especialidade, spm.medicamento, SUM(spm.quantidade)
+FROM historial_paciente hp
+JOIN medico m ON hp.nif = m.nif
+JOIN soma_por_medicamento spm ON spm.medicamento = hp.medicamento
+WHERE hp.tipo = 'receita' AND hp.ano = 2023
+GROUP BY CUBE((hp.localidade, hp.nome), (hp.mes, hp.dia_do_mes), (m.nome, hp.especialidade), spm.medicamento)
