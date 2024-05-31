@@ -289,5 +289,7 @@ for observacao in observacoes_2024:
     else:
         values.append(f"insert into observacao values ('{observacao[0]}', '{observacao[1]}');")
 
-for value in values:
-    print(value)
+# Write the SQL statements to a file
+with open('populate.sql', 'w') as file:
+    for value in values:
+        file.write(value + '\n')
